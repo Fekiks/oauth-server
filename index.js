@@ -48,27 +48,28 @@ app.get("/auth/callback", async (req, res) => {
     res.setHeader("Content-Type", "text/html");
 
     res.send(`
-      <html>
-        <body>
-          <script>
-            (function() {
-              function receiveMessage(e) {
-                console.log("Sending token to CMS");
+  <html>
+    <body>
+      <script>
+        (function() {
+          var target = window.opener || window.parent;
 
-                window.opener.postMessage(
-                  "authorization:github:success:${token}",
-                  "https://praxis-website-sand.vercel.app"
-                );
+          if (!target) {
+            document.body.innerText = "No opener window found";
+            return;
+          }
 
-                window.close();
-              }
+          target.postMessage(
+            "authorization:github:success:${token}",
+            "https://praxis-website-sand.vercel.app"
+          );
 
-              receiveMessage();
-            })();
-          </script>
-        </body>
-      </html>
-    `);
+          window.close();
+        })();
+      </script>
+    </body>
+  </html>
+`);
 
   } catch (err) {
     res.status(500).send("Server error: " + err.message);
