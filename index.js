@@ -21,22 +21,31 @@ app.get("/auth/callback", async (req, res) => {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      client_id: CLIENT_ID,
-      client_secret: CLIENT_SECRET,
+      client_id: process.env.GITHUB_CLIENT_ID,
+      client_secret: process.env.GITHUB_CLIENT_SECRET,
       code,
     }),
   });
 
   const data = await response.json();
 
+  if (!data.access_token) {
+    return res.status(500).send("No access token");
+  }
+
+  // 🔥 DAS IST DER WICHTIGE TEIL
   res.send(`
-    <script>
-      window.opener.postMessage(
-        "authorization:github:success:${data.access_token}",
-        "*"
-      );
-      window.close();
-    </script>
+    <html>
+      <body>
+        <script>
+          window.opener.postMessage(
+            'authorization:github:success:${data.access_token}',
+            '*'
+          );
+          window.close();
+        </script>
+      </body>
+    </html>
   `);
 });
 
