@@ -1,10 +1,12 @@
 import express from "express";
-import fetch from "node-fetch";
 
 const app = express();
 
+// ===== AUTH START =====
 app.get("/auth", (req, res) => {
   const clientId = process.env.GITHUB_CLIENT_ID;
+
+  console.log("CLIENT_ID:", clientId);
 
   if (!clientId) {
     console.error("CLIENT_ID missing!");
@@ -18,9 +20,12 @@ app.get("/auth", (req, res) => {
   res.redirect(redirect);
 });
 
+// ===== CALLBACK =====
 app.get("/auth/callback", async (req, res) => {
   try {
     const code = req.query.code;
+
+    console.log("CODE:", code);
 
     if (!code) {
       return res.status(400).send("Missing code");
@@ -40,6 +45,8 @@ app.get("/auth/callback", async (req, res) => {
     });
 
     const data = await response.json();
+
+    console.log("TOKEN RESPONSE:", data);
 
     if (!data.access_token) {
       return res.status(500).send("No access token: " + JSON.stringify(data));
@@ -74,12 +81,17 @@ app.get("/auth/callback", async (req, res) => {
     `);
 
   } catch (err) {
+    console.error("ERROR:", err);
     res.status(500).send("Server error: " + err.message);
   }
 });
 
+// ===== HEALTH CHECK (sehr wichtig für Railway) =====
+app.get("/", (req, res) => {
+  res.send("OAuth server is running");
+});
 
-// 🔥 HIER kommt der wichtige Teil hin
+// ===== PORT FIX =====
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
