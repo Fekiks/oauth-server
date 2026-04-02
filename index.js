@@ -24,8 +24,6 @@ app.get("/auth/callback", async (req, res) => {
       return res.status(400).send("Missing code");
     }
 
-    console.log("CODE:", code);
-
     const response = await fetch("https://github.com/login/oauth/access_token", {
       method: "POST",
       headers: {
@@ -41,11 +39,11 @@ app.get("/auth/callback", async (req, res) => {
 
     const data = await response.json();
 
-    console.log("TOKEN RESPONSE:", data);
-
     if (!data.access_token) {
       return res.status(500).send("No access token: " + JSON.stringify(data));
     }
+
+    const token = data.access_token;
 
     res.setHeader("Content-Type", "text/html");
 
@@ -54,16 +52,18 @@ app.get("/auth/callback", async (req, res) => {
         <body>
           <script>
             (function() {
-              const msg = "authorization:github:success:${data.access_token}";
-              console.log("Sending token...");
+              function receiveMessage(e) {
+                console.log("Sending token to CMS");
 
-              if (window.opener) {
-                window.opener.postMessage(msg, "*");
-              } else {
-                console.error("No opener window");
+                window.opener.postMessage(
+                  "authorization:github:success:${token}",
+                  "https://praxis-website-sand.vercel.app"
+                );
+
+                window.close();
               }
 
-              window.close();
+              receiveMessage();
             })();
           </script>
         </body>
@@ -71,11 +71,6 @@ app.get("/auth/callback", async (req, res) => {
     `);
 
   } catch (err) {
-    console.error("ERROR:", err);
     res.status(500).send("Server error: " + err.message);
   }
-});
-
-app.listen(3000, () => {
-  console.log("OAuth server running on port 3000");
 });
