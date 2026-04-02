@@ -3,11 +3,16 @@ import fetch from "node-fetch";
 
 const app = express();
 
-const CLIENT_ID = process.env.GITHUB_CLIENT_ID;
-const CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
-
 app.get("/auth", (req, res) => {
-  const redirect = `https://github.com/login/oauth/authorize?client_id=${CLIENT_ID}&scope=repo`;
+  const clientId = process.env.GITHUB_CLIENT_ID;
+
+  console.log("CLIENT_ID:", clientId);
+
+  if (!clientId) {
+    return res.status(500).send("Missing CLIENT_ID");
+  }
+
+  const redirect = `https://github.com/login/oauth/authorize?client_id=${clientId}&scope=repo`;
   res.redirect(redirect);
 });
 
@@ -42,19 +47,24 @@ app.get("/auth/callback", async (req, res) => {
       return res.status(500).send("No access token: " + JSON.stringify(data));
     }
 
-    // ✅ WICHTIG: explizit HTML + send
     res.setHeader("Content-Type", "text/html");
 
     res.send(`
       <html>
         <body>
           <script>
-            console.log("Sending token to opener...");
-            window.opener.postMessage(
-              "authorization:github:success:${data.access_token}",
-              "*"
-            );
-            window.close();
+            (function() {
+              const msg = "authorization:github:success:${data.access_token}";
+              console.log("Sending token...");
+
+              if (window.opener) {
+                window.opener.postMessage(msg, "*");
+              } else {
+                console.error("No opener window");
+              }
+
+              window.close();
+            })();
           </script>
         </body>
       </html>
@@ -65,6 +75,7 @@ app.get("/auth/callback", async (req, res) => {
     res.status(500).send("Server error: " + err.message);
   }
 });
+
 app.listen(3000, () => {
-  console.log("OAuth server running");
+  console.log("OAuth server running on port 3000");
 });
